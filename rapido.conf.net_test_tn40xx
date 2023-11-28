@@ -1,0 +1,351 @@
+# Path to Linux kernel source. Prior to running "rapido cut", the kernel
+# should be built, with modules installed (see KERNEL_INSTALL_MOD_PATH below).
+# If KERNEL_SRC is not set then rapido will attempt to boot the local kernel
+# present under /boot/.
+#
+# e.g. KERNEL_SRC="/home/me/linux"
+#KERNEL_SRC=""
+KERNEL_SRC="/home/acooks/linux/"
+
+# If specified, this parameter defines the path that Dracut should use to
+# obtain compiled kernel modules. If left blank, Dracut will use its default
+# (e.g. /lib/modules) search path.
+# A value of "${KERNEL_SRC}/mods" makes sense when used alongside
+# "INSTALL_MOD_PATH=./mods make modules_install" during kernel compilation.
+KERNEL_INSTALL_MOD_PATH="${KERNEL_SRC}/mods"
+
+######### Host network settings #########
+# bridge device provisioned by "rapido setup-network".
+BR_DEV="rapido-br"
+
+# If specified, a physical network interface to be connected to the bridge.
+# This should only be necessary if you wish to connect to the rapido VMs from a
+# remote host.
+# e.g. BR_IF="eth0"
+#BR_IF=""
+
+# if specified, an address to configure for the bridge device
+BR_ADDR="192.168.155.1/24"
+
+# if specified, start a dhcp server, listening on $BR_DEV
+# e.g. BR_DHCP_SRV_RANGE="192.168.155.10,192.168.155.20,12h"
+#BR_DHCP_SRV_RANGE=""
+
+# Tap VM network device owner
+# e.g. TAP_USER="me"
+TAP_USER=""
+
+# VM network settings are read from the net-conf directory by default (see
+# net-conf.example). The default below need only be changed if RAPIDO_DIR is
+# being shared between independent users with different rapido configs.
+#VM_NET_CONF="${RAPIDO_DIR}/net-conf"
+#########################################
+
+# If specified, share this path with the guest via virtfs. It will be mounted
+# at boot time by the VM under /host.
+# e.g. VIRTFS_SHARE_PATH="/tmp/rapido/"
+#VIRTFS_SHARE_PATH=""
+
+# QEMU_EXTRA_ARGS are used as trailing QEMU parameters. Rapido defaults are:
+# "-nographic": run as a command line application with a VM serial port
+#               redirected to the console. If you wish to run VMs as background
+#               processes, replace this with "-display none -daemonize".
+# "-device virtio-rng-pci": add a RNG device backed by /dev/random on the host.
+#
+# e.g. QEMU_EXTRA_ARGS="-nographic -drive file=/dev/sdz,if=virtio,cache=none,format=raw,index=0"
+# e.g. QEMU_EXTRA_ARGS="-nographic -device virtio-rng-pci -gdb tcp:127.0.0.1:1234"
+# e.g. QEMU_EXTRA_ARGS="-nographic -device virtio-rng-pci -drive id=test,file=/tmp/fstests-test.qcow2,if=none,cache=none -device virtio-blk-pci,drive=test,bus=pci.0,serial=TEST_DEV -drive id=scratch,file=/tmp/fstests-scratch.qcow2,if=none,cache=none -device virtio-blk-pci,drive=scratch,bus=pci.0,serial=SCRATCH_DEV"
+#QEMU_EXTRA_ARGS="-nographic -device virtio-rng-pci"
+QEMU_EXTRA_ARGS="\
+ -M q35,accel=kvm,kernel-irqchip=split \
+ -cpu host \
+ -smp 4\
+ -nographic\
+ -device intel-iommu,intremap=on,caching-mode=on,device-iotlb=on \
+ -device virtio-rng \
+ -device vfio-pci,host=07:00.0 \
+"
+
+
+
+# extra kernel boot parameters, passed via QEMU -append
+# e.g. QEMU_EXTRA_KERNEL_PARAMS="loglevel=0"
+QEMU_EXTRA_KERNEL_PARAMS=""
+
+# The directory to store QEMU pid files. When determining which identifier
+# (vm_num) to assign to a booting rapido VM, QEMU_PID_DIR is checked for
+# rapido_vm${vm_num}.pid files which correspond to an active process,
+# incrementing from vm_num=1. The first vm_num identifier found to not be
+# active is assigned to the booting VM.
+# You shouldn't need to change the default below unless RAPIDO_DIR is
+# being shared between independent users.
+#QEMU_PID_DIR="${RAPIDO_DIR}/initrds"
+
+# extra dracut args, e.g. "--debug --nostrip --tmpdir /tmp"
+#DRACUT_EXTRA_ARGS="--debug --nostrip --tmpdir /tmp"
+DRACUT_EXTRA_ARGS="--add-drivers  tn40xx"
+
+# Directory with dracut source code.
+# Use e.g. to work with upstream dracut or a git repo
+# This implies "--local" switch for dracut
+# Default is unset (i.e. use system dracut)
+#DRACUT_SRC=""
+
+# Initramfs output path for dracut when calling "rapido cut ...", used as input
+# image for QEMU boot. Default below need only be changed if RAPIDO_DIR is being
+# shared between independent users with different rapido configs.
+#DRACUT_OUT="${RAPIDO_DIR}/initrds/myinitrd"
+
+# kernel modules or files for which dynamic debug should be enabled
+# e.g. DYN_DEBUG_MODULES="rbd libceph"
+# e.g. DYN_DEBUG_FILES="drivers/block/rbd.c"
+#DYN_DEBUG_MODULES=""
+#DYN_DEBUG_FILES=""
+
+##### Ceph globals #####
+# CEPH_SRC should correspond to a checkout and build of the Ceph source
+# available at https://github.com/ceph/ceph. Only required if a Ceph specific
+# Cut script will be run. vstart.sh should be run prior to Cut.
+# If not specified, then the Ceph config, keyring and binaries will be obtained
+# from the local system.
+#
+# e.g. CEPH_SRC="/home/me/ceph"
+CEPH_SRC=""
+
+# user for Ceph authentication. Secret obtained from keyring file.
+# The default "admin" user is created by vstart.sh.
+CEPH_USER="admin"
+
+# monitor name used to obtain the mon_addr from ceph.conf [mon.$name], otherwise
+# fallback to mon_host in the [global] section. The default below corresponds to
+# the first vstart.sh deployed monitor.
+CEPH_MON_NAME="a"
+
+# The RBD pool and image to expose via LIO/tcmu iSCSI, loopback fabric, or for
+# autorun/rbd.sh to map as a local device. This image must be created prior
+# to booting the test VM.
+CEPH_RBD_POOL="rbd"
+CEPH_RBD_IMAGE="rapido_rbd"
+CEPH_RBD_IMAGE_MB="4096"
+###########################
+
+####### autorun/lio_*.sh and autorun/tgt_local.sh #######
+# IQN to use for the iSCSI target
+TARGET_IQN="iqn.2003-01.org.linux-iscsi:rapido"
+
+# List of initiator IQNs granted full access to the iSCSI target. Defaults below
+# correspond to the libiscsi test utility.
+INITIATOR_IQNS="iqn.2007-10.com.github:sahlberg:libiscsi:iscsi-test \
+		iqn.2007-10.com.github:sahlberg:libiscsi:iscsi-test-2"
+###########################
+
+####### autorun/fstests_*.sh #######
+# XXX DEPRECATED: use the rapido cut '-x' or '-f' parameters instead
+# If defined, run the following command from within the fstests source directory
+# following VM boot-up.
+# e.g. FSTESTS_AUTORUN_CMD="./check -g auto && shutdown"
+#FSTESTS_AUTORUN_CMD=""
+#################################
+
+##### cut/fstests_btrfs.sh ######
+# If BTRFS_PROGS_SRC is set, then use (prebuilt) btrfs-progs binaries from this
+# path instead of from the local system.
+# e.g. BTRFS_PROGS_SRC="/home/me/btrfs-progs"
+#BTRFS_PROGS_SRC=""
+#################################
+
+##### cut/fstests_exfat.sh ######
+# If EXFAT_PROGS_SRC is set, then use (prebuilt) exfatprogs binaries from this
+# path instead of from the local system.
+# e.g. EXFAT_PROGS_SRC="/home/me/exfatprogs"
+#EXFAT_PROGS_SRC=""
+#################################
+
+## autorun/fstests_cifs.sh and autorun/samba_*.sh ##
+# SMB server and mount options for cifs.ko
+# e.g. CIFS_SERVER="smbserver.example.com"
+#CIFS_SERVER=""
+# e.g. CIFS_MOUNT_OPTS="vers=3.0"
+#CIFS_MOUNT_OPTS=""
+#
+# SMB/CIFS share and authentication details, used for cifs.ko mounts and Samba
+# share configuration.
+# e.g. CIFS_SHARE="myshare"
+#CIFS_SHARE=""
+# e.g. CIFS_DOMAIN="EXAMPLE"
+#CIFS_DOMAIN=""
+# e.g. CIFS_USER="me"
+#CIFS_USER=""
+# e.g. CIFS_PW="password"
+#CIFS_PW=""
+####################################################
+
+######## fstests_*.sh #########
+# FSTESTS_SRC should correspond to a checkout and build of the xfstests source
+# available at https://git.kernel.org/pub/scm/fs/xfs/xfstests-dev.git
+# e.g. FSTESTS_SRC="/home/me/xfstests-dev"
+#FSTESTS_SRC=""
+#
+# Local filesystem fstests defaults to using guest-provisioned zram devices (1G,
+# or FSTESTS_ZRAM_SIZE bytes if specified). Alternatively QEMU_EXTRA_ARGS can be
+# used to provide VM storage, where the block device serial must match a
+# corresponding fstests parameter, e.g. serial=SCRATCH_DEV.
+# e.g. FSTESTS_ZRAM_SIZE="2G"
+#FSTESTS_ZRAM_SIZE=""
+##################################
+
+####### autorun/blktests_*.sh #######
+# XXX DEPRECATED: use the rapido cut '-x' or '-f' parameters instead
+# If defined, run the following command from within the blktests source directory
+# following VM boot-up.
+# e.g. BLKTESTS_AUTORUN_CMD="./check && shutdown"
+#BLKTESTS_AUTORUN_CMD=""
+#################################
+
+######## cut/blktests_*.sh #########
+# BLKTESTS_SRC should correspond to a checkout and build of the blktests source
+# available at https://github.com/osandov/blktests.git
+# e.g. BLKTESTS_SRC="/home/me/blktests"
+#BLKTESTS_SRC=""
+##################################
+
+####### autorun/zonefstests_*.sh #######
+# XXX DEPRECATED: use the rapido cut '-x' or '-f' parameters instead
+# If defined, run the following command from within the zonefstests source directory
+# following VM boot-up.
+# e.g. ZONEFSTESTS_AUTORUN_CMD="./zonefs-tests.sh /dev/nullb0 && shutdown"
+#ZONEFSTESTS_AUTORUN_CMD=""
+#################################
+
+######## cut/zonefstests_*.sh #########
+# ZONEFSTOOLS_SRC should correspond to a checkout and build of the
+# zonefs-tools source available at https://github.com/damien-lemoal/zonefs-tools.git
+# e.g. ZONEFSTOOLS_SRC="/home/me/zonefs-tools"
+##################################
+
+#### unionmount_testsuite.sh ####
+## UNIONMOUNT_TESTSUITE_SRC should correspond to a checkout of the test suite
+## available at https://github.com/amir73il/unionmount-testsuite
+## e.g. UNIONMOUNT_TESTSUITE_SRC="/home/me/unionmount-testsuite"
+#UNIONMOUNT_TESTSUITE_SRC=""
+###################################
+
+#### uring_btrfs.sh and ublksrv_*.sh ####
+# LIBURING_SRC should correspond to a checkout and build of the liburing source
+# available at https://github.com/axboe/liburing
+# e.g. LIBURING_SRC="/home/me/liburing"
+#LIBURING_SRC=""
+###################################
+
+######### ublksrv_*.sh ##########
+# UBLKSRV_SRC should correspond to a checkout and build of the ublksrv source
+# available at https://github.com/ming1/ubdsrv
+# e.g. UBLKSRV_SRC="/home/me/ubdsrv"
+#UBLKSRV_SRC=""
+#################################
+
+######## cut/usb_rbd.sh #########
+# RBD_USB_SRC should correspond to a checkout and build of
+# https://github.com/ddiss/rbd-usb.
+# e.g. RBD_USB_SRC="/home/me/rbd-usb"
+#RBD_USB_SRC=""
+#################################
+
+######## cut/tcmu_*.sh ########
+# TCMU_RUNNER_SRC should correspond to a checkout and build of
+# https://github.com/open-iscsi/tcmu-runner
+# e.g. TCMU_RUNNER_SRC="/home/me/tcmu-runner"
+#TCMU_RUNNER_SRC=""
+#################################
+
+######### ssh_client.sh #########
+# server hostname / IP to use for ssh client connections
+#SSH_SERVER=""
+#
+# ssh client username
+#SSH_USER=""
+#
+# ssh client identity (private key) file, for which a public key is also
+# present at ${SSH_IDENTITY}.pub
+# e.g. SSH_IDENTITY="/home/me/.ssh/rapido_cli/id_rsa"
+#SSH_IDENTITY=""
+#
+# An optional file copied to /etc/ssh/ssh_known_hosts in the VM image
+#SSH_KNOWN_HOSTS=""
+#################################
+
+###### autorun/dropbear.sh ######
+# public ssh key to add to Dropbear's authorized_keys file
+#SSH_AUTHORIZED_KEY=""
+#################################
+
+######### cut/samba_*.sh ########
+# SAMBA_SRC should correspond to a checkout and build of Samba.
+# e.g. SAMBA_SRC="/home/me/samba"
+#SAMBA_SRC=""
+#################################
+
+############# ksmbd #############
+# By default ksmbd-tools binaries will be obtained from the local system. If
+# set, KSMBD_TOOLS_SRC should correspond to a checkout and build of the
+# source available from https://github.com/cifsd-team/ksmbd-tools.
+#KSMBD_TOOLS_SRC=""
+#################################
+
+########## cut/lrbd.sh #########
+# These should all correspond to checked-out source repositories
+#LRBD_SRC=""
+#TARGETCLI_SRC=""
+#RTSLIB_SRC=""
+#CONFIGSHELL_SRC=""
+################################
+
+########## openiscsi ###########
+# OPENISCSI_SRC should correspond to a checkout and build of open-iscsi
+#OPENISCSI_SRC=""
+# autorun/openiscsi.sh uses the first entry in INITIATOR_IQNS as the
+# InitiatorName.
+# INITIATOR_DISCOVERY_ADDR is the hostname or IP address that will be used
+# when issuing a SendTargets discovery request.
+#INITIATOR_DISCOVERY_ADDR=""
+################################
+
+########## cut/ltp.sh ##########
+# LTP_DIR should correspond to the ltp directory tree after make install.
+# The default below matches ltp's default install path prefix.
+LTP_DIR="/opt/ltp"
+#
+# XXX DEPRECATED: use the rapido cut '-x' or '-f' parameters instead
+# LTP_AUTORUN_CMD can be set to automatically run one or more testcases from
+# within the ltp directory.
+# Running a math runtest
+# LTP_AUTORUN_CMD="runltp -f math"
+# running a single test
+# LTP_AUTORUN_CMD="access01"
+#LTP_AUTORUN_CMD=""
+################################
+
+######## autorun/nvme_tcp_initiator.sh ########
+# NVMe over TCP target details used for mapping
+#NVME_TARGET_TCP="192.168.155.100"
+###############################################
+
+############## autorun/*nfs*.sh ##############
+# NFS export name used for server configuration in nfsd-btrfs.
+# e.g. NFS_SHARE="myshare"
+#NFS_SHARE=""
+#
+# NFS server hostname / IP to use for NFS client mount attempts.
+# e.g. NFS_SERVER="nfsserver.example.com"
+#NFS_SERVER=""
+#
+# mount options to use for NFS client mount attempts.
+#e.g. NFS_MOUNT_OPTS="nfsvers=3"
+#NFS_MOUNT_OPTS=""
+###############################################
+
+########## cut/kselftest.sh ##########
+# Path to the installation of kselftest, which must be built and installed in
+# advance, via e.g. "make -C $KERNEL_SRC TARGETS=cgroup kselftest-install"
+#KSELFTEST_DIR="${KERNEL_SRC}/tools/testing/selftests/kselftest_install"
+#######################################
