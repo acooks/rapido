@@ -18,7 +18,11 @@ RAPIDO_DIR="$(realpath -e ${0%/*})/.."
 
 _rt_require_dracut_args "$RAPIDO_DIR/autorun/net_test.sh" "$@"
 _rt_cpu_resources_set "2"
-_rt_mem_resources_set "256M"
+
+# 2G seems excessive.
+# Reducing this may trigger OOM issues in ixgbe and tn40xx drivers.
+# Minimum memory requirements deserves its own test. How?
+_rt_mem_resources_set "2G"
 
 NET_TEST_TOOLS="\
 	bridge \
