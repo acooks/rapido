@@ -4,6 +4,8 @@ Here is an example where real device is 'passed through' from the host to a VM, 
 
 Rather than defining the variables in rapido.conf, the test suite configuration is contained in a test script and passed to the test suite by rapido at run-time. This enables multiple test VMs to run concurrently.
 
+Rapido copies [the network driver test suite](https://github.com/acooks/net-driver-test) to `/net-test/` and calls the `start.sh` script.
+
 Here is an example script with the test configuration variables:
 
 	#!/usr/bin/bash
