@@ -37,6 +37,7 @@ NET_TEST_TOOLS="\
 	lspci \
 	nc \
 	ping \
+	tcpdump \
 "
 
 # ideally dracut would fail if the specified module cannot be found,
